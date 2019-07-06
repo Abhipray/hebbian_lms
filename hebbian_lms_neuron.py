@@ -20,8 +20,8 @@ class HebbLMS:
         self.input_size = input_size
         self.excitatory_ratio = excitatory_ratio
         self.num_neurons = num_neurons
-        # Initialize weights randomly from a normal distribution
-        self.W = np.random.randn(input_size, num_neurons)
+        # Initialize weights randomly from a uniform distribution
+        self.W = np.random.rand(input_size, num_neurons)
         self.lamda = lamda
         self.mu = mu
 
@@ -32,10 +32,10 @@ class HebbLMS:
         :param train: True if the weights should be updated as the layer receives input
         :return:
         """
-        assert X.shape[0] == self.input_size
-        n_samples = X.shape[1]
+        assert X.shape[1] == self.input_size
+        n_samples = X.shape[0]
 
-        Y = np.zeros_like(X)
+        Y = np.zeros((n_samples, self.num_neurons))
         # Iterate over all training vectors one by one
         for i, x in enumerate(X):
             # Mask input vector with excitatatory vs inhibitory mask
@@ -50,14 +50,14 @@ class HebbLMS:
             # Compute output with half-sigmoid
             output = sgm
             output[output < 0] = 0
-            Y[i] = output
+            Y[i] = output.T
 
             if train == True:
                 # Compute feedback error
                 err = sgm - self.lamda * sums
 
                 # Update the weights
-                self.W += 2 * self.mu * err * x
+                self.W += 2 * self.mu * (masked[:, None] @ err[None, :])
 
         return Y
 
