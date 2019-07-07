@@ -5,12 +5,11 @@ This file implements a Hebbian-LMS neural layer which is a form of unsupervised 
 import numpy as np
 
 
-def sigmoid(x):
-    return 1 / (1 + np.exp(-x))
+
 
 
 class HebbLMS:
-    def __init__(self, input_size, excitatory_ratio, num_neurons, lamda=0.5, mu=0.1):
+    def __init__(self, input_size, excitatory_ratio, num_neurons, gamma=0.5, mu=0.1):
         """
 
         :param input_size: Size of the input vector
@@ -22,7 +21,7 @@ class HebbLMS:
         self.num_neurons = num_neurons
         # Initialize weights randomly from a uniform distribution
         self.W = np.random.rand(input_size, num_neurons)
-        self.lamda = lamda
+        self.gamma = gamma
         self.mu = mu
 
     def run(self, X, train=True):
@@ -36,30 +35,37 @@ class HebbLMS:
         n_samples = X.shape[0]
 
         Y = np.zeros((n_samples, self.num_neurons))
+        hidden_sum = np.zeros((n_samples, self.num_neurons))
+        error = np.zeros((n_samples, self.num_neurons))
         # Iterate over all training vectors one by one
         for i, x in enumerate(X):
             # Mask input vector with excitatatory vs inhibitory mask
-            masked = x
+            masked = np.copy(x)
             inhibitory_idx = int(len(x) * self.excitatory_ratio)
             masked[inhibitory_idx:] *= -1
 
             # Get all neurons sum
             sums = self.W.T @ masked
-            sgm = sigmoid(sums)
+            sgm = np.tanh(sums)
 
             # Compute output with half-sigmoid
-            output = sgm
+            output = np.copy(sgm)
             output[output < 0] = 0
             Y[i] = output.T
+            hidden_sum[i] = sums
 
-            if train == True:
+            if train:
                 # Compute feedback error
-                err = sgm - self.lamda * sums
+                err = sgm - self.gamma * sums
+                error[i] = err
 
                 # Update the weights
                 self.W += 2 * self.mu * (masked[:, None] @ err[None, :])
 
-        return Y
+                # Check to see if weights are non-negative
+                assert(self.W.all() >= 0)
+
+        return Y, hidden_sum, error
 
 
 
