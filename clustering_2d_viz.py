@@ -1,16 +1,29 @@
+"""
+This script displays Hebbian LMS clustering results on several different datasets containing 2D vectors. 
+It is based on sklearn's example for comparing different clustering algorithms.
+
+"""
 import time
 import warnings
 
 import numpy as np
 import matplotlib.pyplot as plt
 
-from sklearn import cluster, datasets, mixture
-from sklearn.neighbors import kneighbors_graph
+from sklearn import datasets
 from sklearn.preprocessing import StandardScaler
 from itertools import cycle, islice
 
-from hebbian_lms import HebbLMS
+from hebbian_lms import HebbLMSNet
 
+# Network Configuration
+layer_sizes = [3]
+excitatory_ratio = 0.5
+n_iters = 10
+mu = 0.1
+gamma = 0.75
+
+config_str = "\nlayers:{},excite:{},iters:{},mu:{},gamma:{}".format(
+    str(layer_sizes), excitatory_ratio, n_iters, mu, gamma)
 np.random.seed(0)
 
 # ============
@@ -36,12 +49,6 @@ varied = datasets.make_blobs(
     n_samples=n_samples,
     cluster_std=[1.0, 2.5, 0.5],
     random_state=random_state)
-
-n_training_samples = 50
-n_neurons = 1
-n_weights = 100
-excitatory_ratio = 0.5
-n_iters = 10
 
 datasets = [(noisy_circles, {
     'damping': .77,
@@ -79,7 +86,8 @@ for i_dataset, (dataset, algo_params) in enumerate(datasets):
     # normalize dataset for easier parameter selection
     X = StandardScaler().fit_transform(X)
 
-    hebb = HebbLMS(X.shape[1], excitatory_ratio, 4, mu=0.5, gamma=0.5)
+    hebb = HebbLMSNet(
+        X.shape[1], layer_sizes, excitatory_ratio, mu=mu, gamma=gamma)
 
     clustering_algorithms = (('HebbianLms', hebb), )
 
@@ -110,7 +118,7 @@ for i_dataset, (dataset, algo_params) in enumerate(datasets):
 
         plt.subplot(len(datasets), len(clustering_algorithms), plot_num)
         if i_dataset == 0:
-            plt.title(name, size=18)
+            plt.title(name + config_str, size=10)
 
         colors = np.array(
             list(

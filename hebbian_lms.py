@@ -1,5 +1,6 @@
 """
-This file implements a Hebbian-LMS neural layer which is a form of unsupervised learning.
+This file implements a Hebbian-LMS neural network which is a form of unsupervised learning. 
+See "The Hebbian-LMS Learning Algorithm" by Bernard Widrow ; Youngsik Kim ; Dookun Park. 
 """
 
 import numpy as np
@@ -33,14 +34,15 @@ class HebbLMSNet:
 
     def run(self, X, train=True):
         """
-        Train all neurons in a layer simultaneously
+        Feed forward with optional training for each neuron. 
+        All neurons in a single layer get trained simultaneously before moving on to the next layer.
         :param X: Each row represents a training vector
         :param train: True if the weights should be updated as the layer receives input
         :return:
         """
         assert X.shape[1] == self.input_size
         n_samples = X.shape[0]
-        output_size = self.layer_sizes[1]
+        output_size = self.layer_sizes[-1]
 
         Y = np.zeros((n_samples, output_size))
         hidden_sum = np.zeros((n_samples, output_size))
@@ -49,6 +51,8 @@ class HebbLMSNet:
         for i, x in enumerate(X):
             input = np.copy(x)
             output = np.zeros((output_size, ))
+            err = np.zeros((output_size, ))
+            sums = np.zeros((output_size, ))
             # Iterate over layers
             for W in self.layer_weights:
                 # Mask input vector with excitatatory vs inhibitory mask
@@ -63,12 +67,10 @@ class HebbLMSNet:
                 # Compute output with half-sigmoid
                 output = np.copy(sgm)
                 output[output < 0] = 0
-                hidden_sum[i] = sums
 
                 if train:
                     # Compute feedback error
                     err = sgm - self.gamma * sums
-                    error[i] = err
 
                     # Update the weights
                     W += 2 * self.mu * (masked[:, None] @ err[None, :])
@@ -77,6 +79,8 @@ class HebbLMSNet:
                     assert (W.all() >= 0)
                 input = output  # Feed the output of this layer into the next layer
             Y[i] = output.T
+            hidden_sum[i] = sums
+            error[i] = err
 
         return Y, hidden_sum, error
 

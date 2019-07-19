@@ -17,7 +17,6 @@ from hebbian_lms import HebbLMSNet
 # np.random.seed(10)
 
 # Network Configuration
-n_training_samples = 50
 n_neurons = 1
 n_weights = 100
 excitatory_ratio = 0.5
@@ -28,6 +27,7 @@ gamma = 0.75
 hebb = HebbLMSNet(n_weights, [n_neurons], excitatory_ratio, mu=mu, gamma=gamma)
 
 # Create the training matrix by sampling from a uniform distribution; each row is a training vector
+n_training_samples = 50
 X = np.random.rand(n_training_samples, n_weights)
 
 all_errors = []
