@@ -1,10 +1,10 @@
 """
 This script displays Hebbian LMS clustering results on several different datasets containing 2D vectors. 
 It is based on sklearn's example for comparing different clustering algorithms.
+https://scikit-learn.org/stable/auto_examples/cluster/plot_cluster_comparison.html
 
 """
 import time
-import warnings
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -12,17 +12,19 @@ import matplotlib.pyplot as plt
 from sklearn import datasets
 from sklearn.preprocessing import StandardScaler
 from itertools import cycle, islice
+from tqdm import tqdm
 
 from hebbian_lms import HebbLMSNet
+import os
 
 # Network Configuration
-layer_sizes = [3]
+layer_sizes = [100, 100, 100]
 excitatory_ratio = 0.5
-n_iters = 10
-mu = 0.1
-gamma = 0.75
+n_iters = 5000
+mu = 0.01
+gamma = 0.5
 
-config_str = "\nlayers:{},excite:{},iters:{},mu:{},gamma:{}".format(
+config_str = "layers_{} excite_{} iters_{} mu_{} gamma_{}".format(
     str(layer_sizes), excitatory_ratio, n_iters, mu, gamma)
 np.random.seed(0)
 
@@ -79,7 +81,8 @@ datasets = [(noisy_circles, {
 
 plot_num = 1
 
-for i_dataset, (dataset, algo_params) in enumerate(datasets):
+plt.figure(figsize=(5, 20))
+for i_dataset, (dataset, algo_params) in tqdm(enumerate(datasets)):
 
     X, y = dataset
 
@@ -94,21 +97,8 @@ for i_dataset, (dataset, algo_params) in enumerate(datasets):
     for name, algorithm in clustering_algorithms:
         t0 = time.time()
 
-        # catch warnings related to kneighbors_graph
-        with warnings.catch_warnings():
-            warnings.filterwarnings(
-                "ignore",
-                message="the number of connected components of the " +
-                "connectivity matrix is [0-9]{1,2}" +
-                " > 1. Completing it to avoid stopping the tree early.",
-                category=UserWarning)
-            warnings.filterwarnings(
-                "ignore",
-                message="Graph is not fully connected, spectral embedding" +
-                " may not work as expected.",
-                category=UserWarning)
-            for i in range(n_iters):
-                algorithm.fit(X)
+        for i in tqdm(range(n_iters)):
+            algorithm.fit(X)
 
         t1 = time.time()
         if hasattr(algorithm, 'labels_'):
@@ -116,9 +106,15 @@ for i_dataset, (dataset, algo_params) in enumerate(datasets):
         else:
             y_pred = algorithm.predict(X)
 
-        plt.subplot(len(datasets), len(clustering_algorithms), plot_num)
+        plt.subplot(
+            len(datasets),
+            len(clustering_algorithms),
+            plot_num,
+            aspect='equal',
+            autoscale_on=True,
+            adjustable='box')
         if i_dataset == 0:
-            plt.title(name + config_str, size=10)
+            plt.title(name + '\n' + config_str, size=10)
 
         colors = np.array(
             list(
@@ -143,4 +139,6 @@ for i_dataset, (dataset, algo_params) in enumerate(datasets):
             horizontalalignment='right')
         plot_num += 1
 
+os.makedirs('clustering_plots', exist_ok=True)
+plt.savefig(os.path.join('clustering_plots', config_str + '.png'))
 plt.show()

@@ -57,7 +57,10 @@ class HebbLMSNet:
             for W in self.layer_weights:
                 # Mask input vector with excitatatory vs inhibitory mask
                 masked = np.copy(input)
-                inhibitory_idx = int(len(x) * self.excitatory_ratio)
+                inhibitory_idx = int(len(input) * self.excitatory_ratio)
+
+                # add random noise
+                # masked += np.random.rand(masked.size)
                 masked[inhibitory_idx:] *= -1
 
                 # Get all neurons sum
@@ -68,10 +71,10 @@ class HebbLMSNet:
                 output = np.copy(sgm)
                 output[output < 0] = 0
 
-                if train:
-                    # Compute feedback error
-                    err = sgm - self.gamma * sums
+                # Compute feedback error
+                err = sgm - self.gamma * sums
 
+                if train:
                     # Update the weights
                     W += 2 * self.mu * (masked[:, None] @ err[None, :])
 
@@ -95,10 +98,10 @@ class HebbLMSNet:
         encodings[encodings > 0] = 1
 
         # Convert binary numbers to integer representation
-        y_pred = np.zeros(encodings.shape[0]).astype(np.int)
+        y_pred = []
         for i, encoding in enumerate(encodings):
-            y_pred[i] = int(''.join([str(k) for k in encoding.astype(np.int)]),
-                            2)
+            b_str = ''.join([str(k) for k in encoding.astype(np.int64)])
+            y_pred.append(b_str)
 
         le = preprocessing.LabelEncoder()
         return le.fit_transform(y_pred)
