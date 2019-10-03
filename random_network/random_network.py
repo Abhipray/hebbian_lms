@@ -51,10 +51,10 @@ class RatsNest:
     def get_graph(self):
         return self.net
 
-    def run(self, X):
+    def run(self, X, train=True):
         errors = []
         d = self.net
-
+        Y = []
         for i in range(n_training_samples):
             # Load the input
             for k in range(self.n_input):
@@ -69,10 +69,16 @@ class RatsNest:
                 for p in parents:
                     x.append(d.nodes[p]['output'])
                 x = np.array(x)[None, :]
-                y, _, err = hebb.run(x)
+                y, _, err = hebb.run(x, train=train)
                 err_sum += err[0][0] ** 2
                 d.nodes[k]['output'] = y[0][0]
             errors.append(err_sum / (self.N - self.n_input))
+            # Get outputs from the output nodes
+            y = []
+            for k in range(self.n_hidden+self.n_input, self.N):
+                y.append(d.nodes[k]['output'])
+            Y.append(y)
+        return Y, errors
 
 
 n_input=4
@@ -106,8 +112,8 @@ plt.show()
 n_training_samples = 50
 X = np.random.rand(n_training_samples, n_input)
 
-rat.run(X)
+Y, errors = rat.run(X)
 
 plt.figure()
-# plt.plot(errors)
+plt.plot(errors)
 plt.show()
