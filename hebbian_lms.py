@@ -25,9 +25,16 @@ class HebbLMSNet:
         self.excitatory_ratio = excitatory_ratio
         self.layer_sizes = [input_size] + layer_sizes
         self.layer_weights = []
-        # Initialize weights for all layers randomly from a uniform distribution ~ [0, 1]
+
         for i in range(len(self.layer_sizes) - 1):
-            w = np.random.rand(self.layer_sizes[i], self.layer_sizes[i + 1])
+            if 0.0 <= self.excitatory_ratio <= 1.0:
+                # Initialize weights for all layers randomly from a uniform distribution ~ [0, 1]
+                w = np.random.rand(self.layer_sizes[i],
+                                   self.layer_sizes[i + 1])
+            else:
+                # Initialize weights for all layers randomly from a normal distribution ~ [0, 1]
+                w = np.random.randn(self.layer_sizes[i],
+                                    self.layer_sizes[i + 1])
             self.layer_weights.append(w)
         self.gamma = gamma
         self.mu = mu
@@ -57,11 +64,9 @@ class HebbLMSNet:
             for W in self.layer_weights:
                 # Mask input vector with excitatatory vs inhibitory mask
                 masked = np.copy(input)
-                inhibitory_idx = int(len(input) * self.excitatory_ratio)
-
-                # add random noise
-                # masked += np.random.rand(masked.size)
-                masked[inhibitory_idx:] *= -1
+                if 0.0 <= self.excitatory_ratio <= 1.0:
+                    inhibitory_idx = int(len(input) * self.excitatory_ratio)
+                    masked[inhibitory_idx:] *= -1
 
                 # Get all neurons sum
                 sums = W.T @ masked
@@ -72,14 +77,16 @@ class HebbLMSNet:
                 output[output < 0] = 0
 
                 # Compute feedback error
-                err = sgm - self.gamma * sums
+                err = (sgm - self.gamma * sums)  #* -(1 - self.gamma - sgm**2)
 
                 if train:
                     # Update the weights
                     W += 2 * self.mu * (masked[:, None] @ err[None, :])
 
                     # Check to see if weights are non-negative
-                    assert (W.all() >= 0)
+                    # assert (len(W[W < 0]) == 0)
+                    if 0.0 <= self.excitatory_ratio <= 1.0:
+                        W[W < 0] = 0
                 input = output  # Feed the output of this layer into the next layer
             Y[i] = output.T
             hidden_sum[i] = sums
