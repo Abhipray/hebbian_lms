@@ -11,7 +11,7 @@ import networkx as nx
 import random
 import numpy as np
 from hebbian_lms import HebbLMSNet
-
+from sklearn import preprocessing
 
 
 n_iters = 100
@@ -54,6 +54,7 @@ class RatsNest:
     def run(self, X, train=True):
         errors = []
         d = self.net
+        n_training_samples = X.shape[0]
         Y = []
         for i in range(n_training_samples):
             # Load the input
@@ -78,42 +79,63 @@ class RatsNest:
             for k in range(self.n_hidden+self.n_input, self.N):
                 y.append(d.nodes[k]['output'])
             Y.append(y)
-        return Y, errors
+        return np.array(Y), errors
+
+    def fit(self, X):
+        self.run(X, train=True)
+
+    def predict(self, X):
+        encodings = self.run(X, train=False)[0]
+        print("l", encodings.shape, X.shape)
+        # Convert encodings into the integer labels for cluster membership of each sample.
+
+        # Turn all values greater than 0 into 1
+        encodings[encodings > 0] = 1
+
+        # Convert binary numbers to integer representation
+        y_pred = []
+        for i, encoding in enumerate(encodings):
+            b_str = ''.join([str(k) for k in encoding.astype(np.int64)])
+            y_pred.append(b_str)
+
+        le = preprocessing.LabelEncoder()
+        return le.fit_transform(y_pred)
 
 
-n_input=4
-n_output=4
-n_hidden=10
-N = n_hidden+n_input+n_output
+if __name__ == '__main__':
+    n_input=4
+    n_output=4
+    n_hidden=10
+    N = n_hidden+n_input+n_output
 
-rat = RatsNest(n_input, n_output, n_hidden)
-d = rat.get_graph()
+    rat = RatsNest(n_input, n_output, n_hidden)
+    d = rat.get_graph()
 
-pos=nx.shell_layout(d)
+    pos=nx.shell_layout(d)
 
-# nodes
-nx.draw_networkx_nodes(d,pos,
-                       nodelist=range(n_input),
-                       node_color='r',
-                       node_size=500,
-                   alpha=1)
-nx.draw_networkx_nodes(d,pos,
-                       nodelist=range(n_input+n_hidden, N),
-                       node_color='c',
-                       node_size=500,
-                   alpha=1)
+    # nodes
+    nx.draw_networkx_nodes(d,pos,
+                           nodelist=range(n_input),
+                           node_color='r',
+                           node_size=500,
+                       alpha=1)
+    nx.draw_networkx_nodes(d,pos,
+                           nodelist=range(n_input+n_hidden, N),
+                           node_color='c',
+                           node_size=500,
+                       alpha=1)
 
 
-nx.draw(d, pos, with_labels=True, alpha=0.2)
-plt.show()
+    nx.draw(d, pos, with_labels=True, alpha=0.2)
+    plt.show()
 
-# Do training
-# Create the training matrix by sampling from a uniform distribution; each row is a training vector
-n_training_samples = 50
-X = np.random.rand(n_training_samples, n_input)
+    # Do training
+    # Create the training matrix by sampling from a uniform distribution; each row is a training vector
+    n_training_samples = 50
+    X = np.random.rand(n_training_samples, n_input)
 
-Y, errors = rat.run(X)
+    Y, errors = rat.run(X)
 
-plt.figure()
-plt.plot(errors)
-plt.show()
+    plt.figure()
+    plt.plot(errors)
+    plt.show()
