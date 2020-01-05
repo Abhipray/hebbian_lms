@@ -8,7 +8,7 @@ Created on 2019-10-08
 
 import streamlit as st
 import numpy as np
-import time
+from itertools import cycle, islice
 import networkx as nx
 from sklearn import datasets
 from sklearn.preprocessing import StandardScaler
@@ -69,14 +69,18 @@ datasets = [(noisy_circles, {
             }), (blobs, {}), (no_structure, {})]
 
 # Network Configuration
-layer_sizes = [2, 2, 2, 2]
+# layer_sizes = [2, 2, 2, 2]
 n_iters = 100
 gamma = 0.5
+excitatory_ratio = -1
 
 plot_num = 1
 # fig = plt.figure(figsize=(5, 10))
 for i_dataset, (dataset, algo_params) in enumerate(datasets):
     X, y = dataset
+    # # Add intercept term
+    # X = np.concatenate([X, np.ones((X.shape[0], 1))], axis=1)
+    print(X.shape)
     # normalize dataset for easier parameter selection
     X = StandardScaler().fit_transform(X)
 
@@ -105,7 +109,10 @@ st.sidebar.pyplot()
 dataset_choice = st.sidebar.selectbox("Select dataset",
                                       range(1, 1 + len(datasets)))
 
-algo_choice = st.sidebar.selectbox("Select network", ["Rat's nest", "Layered"])
+algo_choice = st.sidebar.selectbox("Select network", [
+    "Layered",
+    "Rat's nest",
+])
 
 X, y = datasets[dataset_choice - 1][0]
 # normalize dataset for easier parameter selection
@@ -113,13 +120,25 @@ X = StandardScaler().fit_transform(X)
 
 # Show network options and configuration
 
-mu = st.sidebar.slider('Learning rate', 0.0, 2.0, 0.05, 0.01)
+mu = st.sidebar.slider('Learning rate', 0.0, 0.5, 0.01, 0.01)
 if algo_choice == 'Layered':
-    hebb = HebbLMSNet(X.shape[1], layer_sizes, -1, mu=mu, gamma=gamma)
+    n_hidden_layers = st.sidebar.slider('Number of hidden layers', 1, 4, 2)
+    layer_sizes = []
+    for i in range(n_hidden_layers):
+        n_h = st.sidebar.slider(f'Number of hidden neurons in layer {i}', 1,
+                                10, 4)
+        layer_sizes.append(n_h)
+    n_output = st.sidebar.slider('Number of output neurons', 1, 20, 2)
+    layer_sizes.append(n_output)
+    hebb = HebbLMSNet(X.shape[1],
+                      layer_sizes,
+                      excitatory_ratio,
+                      mu=mu,
+                      gamma=gamma)
     d = hebb.get_graph()
-    plt.figure()
-    nx.draw(d, pos=nx.shell_layout(d), with_labels=True, alpha=0.2)
-    st.pyplot()
+    # plt.figure()
+    # nx.draw(d, pos=nx.spring_layout(d), with_labels=True, alpha=0.2)
+    # st.pyplot()
     algorithm = hebb
 else:
     n_input = X.shape[1]
@@ -186,7 +205,18 @@ def map_decision_boundaries(X, algorithm, ax):
     plt.cla()
     ax.contourf(xx, yy, z, cmap=cmap, alpha=0.5)
 
-    ax.scatter(X[:, 0], X[:, 1], c=y_pred, s=10, cmap=cmap)
+    colors = np.array(
+        list(
+            islice(
+                cycle([
+                    '#377eb8', '#ff7f00', '#4daf4a', '#f781bf', '#a65628',
+                    '#984ea3', '#999999', '#e41a1c', '#dede00'
+                ]), int(max(y_pred) + 1))))
+    # add black color for outliers (if any)
+    colors = np.append(colors, ["#000000"])
+
+    # ax.scatter(X[:, 0], X[:, 1], c=y_pred, s=10, cmap=cmap)
+    ax.scatter(X[:, 0], X[:, 1], s=10, color=colors[y_pred])
 
     ax.set_xlim(-2.5, 2.5)
     ax.set_ylim(-2.5, 2.5)

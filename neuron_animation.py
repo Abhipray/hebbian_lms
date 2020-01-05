@@ -9,6 +9,9 @@ import numpy as np
 import seaborn
 import matplotlib.pyplot as plt
 import matplotlib
+import os
+
+from pathlib import Path
 from matplotlib.animation import FuncAnimation
 matplotlib.use("Qt5Agg")
 seaborn.set_style("whitegrid")
@@ -17,16 +20,18 @@ from hebbian_lms import HebbLMSNet
 
 np.random.seed(10)
 
+output_dir = Path('clustering_plots')
+os.makedirs(output_dir, exist_ok=True)
+
 # Network Configuration
 n_neurons = 1
 n_weights = 100
-excitatory_ratio = 0.5
+excitatory_ratio = -1
 n_iters = 500
 mu = 0.02
 gamma = 0.5
 
-hebb = HebbLMSNet(
-    n_weights, [50, n_neurons], excitatory_ratio, mu=mu, gamma=gamma)
+hebb = HebbLMSNet(n_weights, [n_neurons], excitatory_ratio, mu=mu, gamma=gamma)
 
 # Create the training matrix by sampling from a uniform distribution; each row is a training vector
 n_training_samples = 50
@@ -77,17 +82,15 @@ def animate(i):
     return line1, line2, line3
 
 
-ani = FuncAnimation(
-    fig,
-    animate,
-    frames=n_iters,
-    init_func=init,
-    interval=20,
-    blit=True,
-    save_count=50)
+ani = FuncAnimation(fig,
+                    animate,
+                    frames=n_iters,
+                    init_func=init,
+                    interval=20,
+                    blit=True,
+                    save_count=50)
 
-ani.save(
-    "clustering_plots/hlms_neuron_training.gif", dpi=80, writer='imagemagick')
+ani.save(output_dir / "hlms_neuron_training.gif", dpi=80, writer='imagemagick')
 
 plt.show()
 
@@ -97,6 +100,6 @@ plt.plot(np.array(all_errors)**2)
 plt.title("Learning curve")
 plt.xlabel("Iterations")
 plt.ylabel("MSE")
-plt.savefig('clustering_plots/hlms_learning_curve.png')
+plt.savefig(output_dir / 'hlms_learning_curve.png')
 plt.show()
 plt.close()
