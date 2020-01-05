@@ -13,6 +13,7 @@ class HebbLMSNet:
                  input_size: int,
                  layer_sizes: list,
                  excitatory_ratio,
+                 percent: bool = True,
                  gamma=0.5,
                  mu=0.1):
         """
@@ -21,7 +22,9 @@ class HebbLMSNet:
         :param excitatory_ratio: Ratio of input connections that are excitatory to the total number of connections; value between 0 and 1
         :param gamma: value between 0 and 1 used in calculating errors for updating weights
         :param mu: learning rate
+        :param percent: Use the percent variant of hebbian LMS
         """
+        self.percent = percent
         self.input_size = input_size
         self.excitatory_ratio = excitatory_ratio
         self.layer_sizes = [input_size] + layer_sizes
@@ -83,6 +86,8 @@ class HebbLMSNet:
                 if train:
                     # Update the weights
                     neg_gradient = self.mu * (masked[:, None] @ err[None, :])
+                    if self.percent:
+                        neg_gradient *= W
                     W += neg_gradient
 
                     # Check to see if weights are non-negative
