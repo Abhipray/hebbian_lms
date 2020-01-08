@@ -28,7 +28,7 @@ n_iters = 800
 mu = 0.01
 gamma = 0.5
 percent = True
-save_gif = False
+save_gif = True
 
 # Animation output configuation
 output_dir = Path('clustering_plots')
@@ -64,20 +64,23 @@ ax.axis([-5, 5, -2, 2])
 x = np.arange(-5, 5, 0.1)
 
 line1, = ax.plot(x, np.sin(x), 'xb')
-line2, = ax.plot(x, np.sin(x), 'or')
+line2, = ax.plot(x, np.sin(x), 'or', fillstyle='none')
 line3, = ax.plot(x, np.sin(x), '^y')
-ax.plot(x, np.tanh(x), linewidth=0.5)
-ax.plot(x, gamma * x, 'y-', linewidth=0.5)
-plt.xlabel("SUM")
-plt.ylabel("tanh(SUM)")
+ax.plot(x, np.tanh(x), linewidth=0.75, alpha=0.5)
+ax.plot(x, gamma * x, 'y-', linewidth=0.75, alpha=0.5)
+out = np.tanh(x)
+out[x < 0] = 0
+ax.plot(x, out, 'k-', linewidth=0.75)
+plt.xlabel("(SUM)")
+plt.ylabel("(OUT)")
 plt.title("Clustering process")
 
 # Save snapshots
 for iter in snapshot_iters:
     i = max(iter - 1, 0)
-    pos_idx = all_sums[i] > 0
-    neg_idx = all_sums[i] < 0
-    zero_idx = all_sums[i] == 0
+    pos_idx = all_sums[0] > 0
+    neg_idx = all_sums[0] < 0
+    zero_idx = all_sums[0] == 0
     line1.set_data(all_sums[i][pos_idx], all_Y[i][pos_idx])
     line2.set_data(all_sums[i][neg_idx], all_Y[i][neg_idx])
     line3.set_data(all_sums[i][zero_idx], all_Y[i][zero_idx])
@@ -92,9 +95,9 @@ def init():
 
 
 def animate(i):
-    pos_idx = all_sums[i] > 0
-    neg_idx = all_sums[i] < 0
-    zero_idx = all_sums[i] == 0
+    pos_idx = all_sums[0] > 0
+    neg_idx = all_sums[0] < 0
+    zero_idx = all_sums[0] == 0
     line1.set_data(all_sums[i][pos_idx], all_Y[i][pos_idx])
     line2.set_data(all_sums[i][neg_idx], all_Y[i][neg_idx])
     line3.set_data(all_sums[i][zero_idx], all_Y[i][zero_idx])
