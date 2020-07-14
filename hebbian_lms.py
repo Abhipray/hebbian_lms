@@ -4,6 +4,7 @@ See "The Hebbian-LMS Learning Algorithm" by Bernard Widrow ; Youngsik Kim ; Dook
 """
 
 import numpy as np
+import networkx as nx
 from sklearn import preprocessing
 
 
@@ -12,6 +13,7 @@ class HebbLMSNet:
                  input_size: int,
                  layer_sizes: list,
                  excitatory_ratio,
+                 percent: bool = True,
                  gamma=0.5,
                  mu=0.1):
         """
@@ -20,7 +22,9 @@ class HebbLMSNet:
         :param excitatory_ratio: Ratio of input connections that are excitatory to the total number of connections; value between 0 and 1
         :param gamma: value between 0 and 1 used in calculating errors for updating weights
         :param mu: learning rate
+        :param percent: Use the percent variant of hebbian LMS
         """
+        self.percent = percent
         self.input_size = input_size
         self.excitatory_ratio = excitatory_ratio
         self.layer_sizes = [input_size] + layer_sizes
@@ -29,11 +33,11 @@ class HebbLMSNet:
         for i in range(len(self.layer_sizes) - 1):
             if 0.0 <= self.excitatory_ratio <= 1.0:
                 # Initialize weights for all layers randomly from a uniform distribution ~ [0, 1]
-                w = np.random.rand(self.layer_sizes[i],
+                w = np.random.rand(self.layer_sizes[i] + 1,
                                    self.layer_sizes[i + 1])
             else:
                 # Initialize weights for all layers randomly from a normal distribution ~ [0, 1]
-                w = np.random.randn(self.layer_sizes[i],
+                w = np.random.randn(self.layer_sizes[i] + 1,
                                     self.layer_sizes[i + 1])
             self.layer_weights.append(w)
         self.gamma = gamma
@@ -63,7 +67,7 @@ class HebbLMSNet:
             # Iterate over layers
             for W in self.layer_weights:
                 # Mask input vector with excitatatory vs inhibitory mask
-                masked = np.copy(input)
+                masked = np.append(np.copy(input), 1)
                 if 0.0 <= self.excitatory_ratio <= 1.0:
                     inhibitory_idx = int(len(input) * self.excitatory_ratio)
                     masked[inhibitory_idx:] *= -1
@@ -81,7 +85,10 @@ class HebbLMSNet:
 
                 if train:
                     # Update the weights
-                    W += 2 * self.mu * (masked[:, None] @ err[None, :])
+                    neg_gradient = self.mu * (masked[:, None] @ err[None, :])
+                    if self.percent:
+                        neg_gradient *= W
+                    W += neg_gradient
 
                     # Check to see if weights are non-negative
                     # assert (len(W[W < 0]) == 0)
@@ -112,3 +119,20 @@ class HebbLMSNet:
 
         le = preprocessing.LabelEncoder()
         return le.fit_transform(y_pred)
+
+    def get_graph(self):
+        d = nx.DiGraph()
+        node_count = 0
+        for i, layer_size in enumerate(self.layer_sizes):
+            print(layer_size)
+            if i == 0:
+                for j in range(node_count, node_count + layer_size):
+                    d.add_node(j)
+                    node_count += 1
+            else:
+                for j in range(node_count, node_count + layer_size):
+                    d.add_node(j)
+                    node_count += 1
+                    for k in range(self.layer_sizes[i - 1]):
+                        d.add_edge(j - k - 1, j)
+        return d
