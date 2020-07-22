@@ -89,7 +89,6 @@ class HebbLMSNet:
                     if self.percent:
                         neg_gradient *= W
                     W += neg_gradient
-
                     # Check to see if weights are non-negative
                     # assert (len(W[W < 0]) == 0)
                     if 0.0 <= self.excitatory_ratio <= 1.0:
@@ -102,7 +101,7 @@ class HebbLMSNet:
         return Y, hidden_sum, error
 
     def fit(self, X):
-        self.run(X, train=True)
+        return self.run(X, train=True)
 
     def predict(self, X):
         encodings = self.run(X, train=False)[0]
