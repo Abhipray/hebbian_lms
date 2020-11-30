@@ -15,6 +15,7 @@ class HebbLMSNet:
                  excitatory_ratio,
                  percent: bool = True,
                  gamma=0.5,
+                 d_min=0.001,
                  mu=0.1):
         """
         :param input_size: Length of the input vector
@@ -29,17 +30,27 @@ class HebbLMSNet:
         self.excitatory_ratio = excitatory_ratio
         self.layer_sizes = [input_size] + layer_sizes
         self.layer_weights = []
+        self.layer_biases = []
 
         for i in range(len(self.layer_sizes) - 1):
-            if 0.0 <= self.excitatory_ratio <= 1.0:
-                # Initialize weights for all layers randomly from a uniform distribution ~ [0, 1]
-                w = np.random.rand(self.layer_sizes[i] + 1,
-                                   self.layer_sizes[i + 1])
-            else:
-                # Initialize weights for all layers randomly from a normal distribution ~ [0, 1]
-                w = np.random.randn(self.layer_sizes[i] + 1,
-                                    self.layer_sizes[i + 1])
+            m = self.layer_sizes[i]
+            n = self.layer_sizes[i + 1]
+
+            w_min = d_min / np.sqrt(m)
+            # b = -d_min * np.sqrt(m)
+
+            # print('w_min', w_min)
+            # # Initialize weights for all layers randomly from a uniform distribution ~ [w_min, 1]
+            # w = np.random.uniform(low=w_min, high=1.0, size=(m, n))
+            # self.layer_weights.append(w)
+            # self.layer_biases.append(b)
+
+            w = np.random.uniform(low=w_min, high=1.0, size=(m, n))
+            b = -np.random.uniform(low=0, high=1,
+                                   size=(1, n)) * np.linalg.norm(w, axis=0)
             self.layer_weights.append(w)
+            self.layer_biases.append(b)
+
         self.gamma = gamma
         self.mu = mu
 
@@ -65,15 +76,15 @@ class HebbLMSNet:
             err = np.zeros((output_size, ))
             sums = np.zeros((output_size, ))
             # Iterate over layers
-            for W in self.layer_weights:
+            for W, b in zip(self.layer_weights, self.layer_biases):
                 # Mask input vector with excitatatory vs inhibitory mask
-                masked = np.append(np.copy(input), 1)
+                masked = np.copy(input)
                 if 0.0 <= self.excitatory_ratio <= 1.0:
                     inhibitory_idx = int(len(input) * self.excitatory_ratio)
                     masked[inhibitory_idx:] *= -1
 
                 # Get all neurons sum
-                sums = W.T @ masked
+                sums = W.T @ masked + b[0]
                 sgm = np.tanh(sums)
 
                 # Compute output with half-sigmoid
@@ -81,6 +92,9 @@ class HebbLMSNet:
                 output[output < 0] = 0
 
                 # Compute feedback error
+                # err = (sgm - self.gamma * sums)  #* -(1 - self.gamma - sgm**2)
+                # sums *= 4 / len(input)
+                # sgm = np.tanh(sums)
                 err = (sgm - self.gamma * sums)  #* -(1 - self.gamma - sgm**2)
 
                 if train:
@@ -117,7 +131,7 @@ class HebbLMSNet:
             y_pred.append(b_str)
 
         le = preprocessing.LabelEncoder()
-        return le.fit_transform(y_pred)
+        return le.fit_transform(y_pred), encodings
 
     def get_graph(self):
         d = nx.DiGraph()
